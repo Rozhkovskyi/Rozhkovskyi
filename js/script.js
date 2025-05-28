@@ -176,20 +176,163 @@ function handleCollections() {
         textBox.classList.remove("visible");
 
         if (imageBox) {
-          imageBox.style.display = "grid";
+          imageBox.style.display = "flex";
           imageBox.classList.add("visible");
+          imageBox.classList.remove("projects-gallery");
 
-          if (collectionName === "logotypes" || collectionName === "type-design") {
-            imageBox.style.backgroundColor = "white";
-            imageBox.style.color = "black";
+          if (collectionName === "photography") {
+            // Create and set up container
+            const container = document.createElement('div');
+            container.className = 'photography-container';
+            
+            // Clear and set up image box
+            imageBox.innerHTML = '';
+            imageBox.className = 'image-box photography';
+            
+            // Add container to DOM
+            imageBox.appendChild(container);
+            
+            // Add first pair of images
+            const images = collections[collectionName];
+            const firstPair = document.createElement('div');
+            firstPair.className = 'image-pair';
+            
+            // Add first two images
+            for (let i = 0; i < 2 && i < images.length; i++) {
+              const img = document.createElement('img');
+              img.src = `images/${images[i]}`;
+              img.alt = 'Photography Image';
+              firstPair.appendChild(img);
+            }
+            
+            container.appendChild(firstPair);
+            
+            // Show the box and first pair of images
+            requestAnimationFrame(() => {
+              imageBox.classList.add('visible');
+              firstPair.querySelectorAll('img').forEach(img => img.classList.add('visible'));
+            });
+            
+            // After delay, set up infinite scroll
+            setTimeout(() => {
+              // Prepare triple images array but keep first pair
+              const tripleImages = [...images, ...images, ...images];
+              
+              // Add remaining pairs
+              for (let i = 2; i < tripleImages.length; i += 2) {
+                const pair = document.createElement('div');
+                pair.className = 'image-pair';
+                
+                // Add two images to the pair
+                for (let j = 0; j < 2 && (i + j) < tripleImages.length; j++) {
+                  const img = document.createElement('img');
+                  img.src = `images/${tripleImages[i + j]}`;
+                  img.alt = 'Photography Image';
+                  img.classList.add('visible');
+                  pair.appendChild(img);
+                }
+                
+                container.appendChild(pair);
+              }
+              
+              // Enable scrolling
+              container.style.overflow = 'scroll';
+              
+              // Add scroll handler
+              container.addEventListener('scroll', () => {
+                const scrollTop = container.scrollTop;
+                const totalHeight = container.scrollHeight;
+                const oneThird = totalHeight / 3;
+
+                if (scrollTop >= oneThird * 2) {
+                  container.scrollTop = oneThird;
+                } else if (scrollTop <= 0) {
+                  container.scrollTop = oneThird;
+                }
+              });
+            }, 1000);
+          } else if (collectionName === "logotypes" || collectionName === "type-design" || 
+              collectionName === "posters" || collectionName === "fashion") {
+            const isLogotype = collectionName === "logotypes";
+            const containerClass = 
+              collectionName === "posters" ? "posters-container" :
+              collectionName === "fashion" ? "fashion-container" :
+              isLogotype ? "logotype-container" : "type-design-container";
+            
+            // Create and set up container first
+            const container = document.createElement('div');
+            container.className = containerClass;
+            
+            // Clear and set up image box
+            imageBox.innerHTML = '';
+            imageBox.className = 'image-box ' + collectionName;
+            if (collectionName === "type-design") {
+              imageBox.style.backgroundColor = "white";
+              imageBox.style.color = "black";
+            }
+            
+            // Add container to DOM
+            imageBox.appendChild(container);
+            
+            // Add first image
+            const images = collections[collectionName];
+            const firstImg = document.createElement('img');
+            firstImg.src = `images/${images[0]}`;
+            firstImg.alt = `${collectionName} Image`;
+            container.appendChild(firstImg);
+            
+            // Show the box and first image
+            requestAnimationFrame(() => {
+              imageBox.classList.add('visible');
+              firstImg.classList.add('visible');
+            });
+            
+            // After delay, set up infinite scroll
+            setTimeout(() => {
+              // Prepare triple images array but keep first image in place
+              const tripleImages = [...images, ...images, ...images];
+              
+              // Add images after the first one
+              tripleImages.forEach((image, index) => {
+                if (index > 0) { // Skip first image since it's already there
+                  const img = document.createElement('img');
+                  img.src = `images/${image}`;
+                  img.alt = `${collectionName} Image`;
+                  img.classList.add('visible');
+                  container.appendChild(img);
+                }
+              });
+              
+              // Enable scrolling
+              container.style.overflow = 'scroll';
+              
+              // Add scroll handler
+              container.addEventListener('scroll', () => {
+                const scrollTop = container.scrollTop;
+                const totalHeight = container.scrollHeight;
+                const oneThird = totalHeight / 3;
+
+                if (scrollTop >= oneThird * 2) {
+                  container.scrollTop = oneThird;
+                } else if (scrollTop <= 0) {
+                  container.scrollTop = oneThird;
+                }
+              });
+            }, 1000);
           } else {
             imageBox.style.backgroundColor = defaultBackground.backgroundColor;
             imageBox.style.color = defaultBackground.color;
+            imageBox.classList.remove("logotypes");
+            imageBox.classList.remove("type-design");
+            imageBox.classList.remove("posters");
+            imageBox.classList.remove("photography");
+            imageBox.classList.remove("fashion");
+            
+            // Regular collection display
+            imageBox.innerHTML = collections[collectionName]
+              .map((image) => `<img src="images/${image}" alt="${collectionName} Image">`)
+              .join("");
           }
-
-          imageBox.innerHTML = collections[collectionName]
-            .map((image) => `<img src="images/${image}" alt="${collectionName} Image">`)
-            .join("");
         }
       });
     });
@@ -204,39 +347,58 @@ function handleDefaultSection(section) {
 
 // Handle footer item behavior
 const footerItems = document.querySelectorAll(".footer-item");
+const mainContent = document.querySelector(".main-content");
+const contentBoxes = document.querySelectorAll(".about-box, .services-box, .text-box, .image-box");
 
 footerItems.forEach((item) => {
   item.addEventListener("click", (event) => {
     event.stopPropagation();
     const isActive = item.classList.contains("active");
 
+    // Reset all footer items
     footerItems.forEach((footer) => {
       footer.classList.remove("active");
-      if (footer.id == "footer-item-cotact") footer.textContent = "Contact";
+      if (footer.id === "footer-item-contact") {
+        footer.textContent = "Contact";
+      }
     });
 
-    if (!isActive) {
+    // Reset content box heights
+    mainContent.classList.remove("footer-expanded");
+    contentBoxes.forEach(box => box.classList.remove("footer-expanded"));
+
+    if (!isActive && item.id === "footer-item-contact") {
+      // Expand contact box
       item.classList.add("active");
-      item.innerHTML = `
-        Nick Rozhkovskyi<br>
-        +420722059544<br>
-        myk.rozhkvsk@gmail.com<br>
-        Czech Republic, Prague city<br>
-      `;
-      imageBox.style.height = "200px";
-    } else {
-      item.textContent = "Contact";
-      imageBox.style.height = "auto";
+      item.innerHTML = `Nick Rozhkovskyi
++420722059544
+myk.rozhkvsk@gmail.com`;
+
+      // Adjust content boxes height
+      mainContent.classList.add("footer-expanded");
+      contentBoxes.forEach(box => {
+        if (box.classList.contains("visible")) {
+          box.classList.add("footer-expanded");
+        }
+      });
     }
   });
 });
 
-document.addEventListener("click", () => {
-  footerItems.forEach((footer) => {
-    footer.classList.remove("active");
-    if (footer.id == "footer-item-cotact") footer.textContent = "Contact";
-  });
-  imageBox.style.height = "auto";
+// Close contact box when clicking outside
+document.addEventListener("click", (event) => {
+  if (!event.target.closest('.footer')) {
+    footerItems.forEach((footer) => {
+      footer.classList.remove("active");
+      if (footer.id === "footer-item-contact") {
+        footer.textContent = "Contact";
+      }
+    });
+    
+    // Reset content box heights
+    mainContent.classList.remove("footer-expanded");
+    contentBoxes.forEach(box => box.classList.remove("footer-expanded"));
+  }
 });
 
 
