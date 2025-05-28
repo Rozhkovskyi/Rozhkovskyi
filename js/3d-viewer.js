@@ -1,12 +1,9 @@
 let scene, camera, renderer, controls, model;
 const modelContainer = document.getElementById('model-container');
 const loadingText = document.querySelector('.loading-text');
-const clickInstruction = document.querySelector('.click-instruction');
 const mainWrapper = document.querySelector('.main-wrapper');
 
-let isDragging = false;
 let isAnimating = false;
-let isInDefaultPosition = true;
 
 // Default rotation values
 const defaultRotation = {
@@ -45,16 +42,11 @@ function init() {
     controls.minDistance = 3;
     controls.maxDistance = 10;
 
-    // Add drag detection
-    controls.addEventListener('start', () => {
-        isDragging = true;
-        isInDefaultPosition = false;
-    });
-
+    // Handle when user stops interacting with model
     controls.addEventListener('end', () => {
-        setTimeout(() => {
-            isDragging = false;
-        }, 100);
+        if (!isAnimating) {
+            startAnimationSequence();
+        }
     });
 
     // Load 3D model
@@ -70,9 +62,8 @@ function init() {
             const center = box.getCenter(new THREE.Vector3());
             model.position.sub(center);
             
-            // Hide loading text and show click instruction
+            // Hide loading text
             loadingText.style.display = 'none';
-            clickInstruction.classList.add('visible');
         },
         function (xhr) {
             console.log((xhr.loaded / xhr.total * 100) + '% loaded');
@@ -82,73 +73,56 @@ function init() {
         }
     );
 
-    // Add click handler to container
-    modelContainer.addEventListener('click', (event) => {
-        if (!isAnimating && !isDragging) {
-            onModelClick();
-        }
-    });
-
     // Handle window resize
     window.addEventListener('resize', onWindowResize, false);
 }
 
-function onModelClick() {
-    if (isAnimating) return;
-    
-    // Check if model needs to return to default position
-    if (!isInDefaultPosition) {
-        isAnimating = true;
-        controls.enabled = false;
+function startAnimationSequence() {
+    isAnimating = true;
+    controls.enabled = false;
 
-        // Create timeline for returning to default position
-        const resetTl = gsap.timeline({
-            onComplete: () => {
-                isAnimating = false;
-                controls.enabled = true;
-                isInDefaultPosition = true;
-                clickInstruction.textContent = 'Click again to enter';
-            }
-        });
+    // First timeline: Return to default position
+    const resetTl = gsap.timeline({
+        onComplete: () => {
+            // Start zoom animation immediately after reset
+            startZoomAnimation();
+        }
+    });
 
-        resetTl.to(model.rotation, {
-            duration: 1,
-            x: defaultRotation.x,
-            y: defaultRotation.y,
-            z: defaultRotation.z,
-            ease: "power2.inOut"
-        });
-    } 
-    // If already in default position, do zoom animation
-    else {
-        isAnimating = true;
-        controls.enabled = false;
+    resetTl.to(model.rotation, {
+        duration: 1,
+        x: defaultRotation.x,
+        y: defaultRotation.y,
+        z: defaultRotation.z,
+        ease: "power2.inOut"
+    });
+}
 
-        // Timeline for zoom animation
-        const zoomTl = gsap.timeline({
-            onComplete: () => {
-                isAnimating = false;
-                modelContainer.style.display = 'none';
-                mainWrapper.style.display = 'flex';
-                mainWrapper.classList.add('visible');
-                
-                // Reset all nav items and content boxes
-                document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-                document.querySelectorAll('.about-box, .services-box, .text-box, .image-box').forEach(box => {
-                    box.style.display = 'none';
-                    box.classList.remove('visible');
-                });
-            }
-        });
+function startZoomAnimation() {
+    // Timeline for zoom animation
+    const zoomTl = gsap.timeline({
+        onComplete: () => {
+            isAnimating = false;
+            modelContainer.style.display = 'none';
+            mainWrapper.style.display = 'flex';
+            mainWrapper.classList.add('visible');
+            
+            // Reset all nav items and content boxes
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.querySelectorAll('.about-box, .services-box, .text-box, .image-box').forEach(box => {
+                box.style.display = 'none';
+                box.classList.remove('visible');
+            });
+        }
+    });
 
-        zoomTl.to([camera.position, camera], {
-            duration: 2,
-            ease: "power2.in",
-            z: 0.1,
-            fov: 20,
-            onUpdate: () => camera.updateProjectionMatrix()
-        });
-    }
+    zoomTl.to([camera.position, camera], {
+        duration: 2,
+        ease: "power2.in",
+        z: 0.1,
+        fov: 20,
+        onUpdate: () => camera.updateProjectionMatrix()
+    });
 }
 
 function onWindowResize() {
