@@ -5,11 +5,16 @@ const mainWrapper = document.querySelector('.main-wrapper');
 
 let isAnimating = false;
 
-// Default rotation values
+// Default positions and rotations
 const defaultRotation = {
     x: 0,
     y: 0,
     z: 0
+};
+
+const defaultCamera = {
+    position: { x: 0, y: 0, z: 5 },
+    rotation: { x: 0, y: 0, z: 0 }
 };
 
 function init() {
@@ -19,7 +24,7 @@ function init() {
 
     // Create camera with wider initial FOV
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.z = 5;
+    camera.position.z = defaultCamera.position.z;
 
     // Create renderer
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -43,9 +48,20 @@ function init() {
     controls.maxDistance = 10;
 
     // Handle when user stops interacting with model
+    let resetTimeout;
+    controls.addEventListener('start', () => {
+        // Clear any pending reset when user starts interacting
+        if (resetTimeout) {
+            clearTimeout(resetTimeout);
+        }
+    });
+
     controls.addEventListener('end', () => {
+        // Wait a short moment to ensure user has finished interaction
         if (!isAnimating) {
-            startAnimationSequence();
+            resetTimeout = setTimeout(() => {
+                startAnimationSequence();
+            }, 500); // Half second delay to ensure user is done
         }
     });
 
@@ -81,26 +97,43 @@ function startAnimationSequence() {
     isAnimating = true;
     controls.enabled = false;
 
-    // First timeline: Return to default position
-    const resetTl = gsap.timeline({
-        onComplete: () => {
-            // Start zoom animation immediately after reset
-            startZoomAnimation();
-        }
-    });
+    // Create master timeline
+    const masterTimeline = gsap.timeline();
 
-    resetTl.to(model.rotation, {
-        duration: 1,
+    // First: Reset both model and camera to default positions
+    masterTimeline.to(model.rotation, {
+        duration: 1.5,
         x: defaultRotation.x,
         y: defaultRotation.y,
         z: defaultRotation.z,
         ease: "power2.inOut"
-    });
-}
+    }, 0);
 
-function startZoomAnimation() {
-    // Timeline for zoom animation
-    const zoomTl = gsap.timeline({
+    masterTimeline.to(camera.position, {
+        duration: 1.5,
+        x: defaultCamera.position.x,
+        y: defaultCamera.position.y,
+        z: defaultCamera.position.z,
+        ease: "power2.inOut"
+    }, 0);
+
+    masterTimeline.to(controls.target, {
+        duration: 1.5,
+        x: 0,
+        y: 0,
+        z: 0,
+        ease: "power2.inOut",
+        onComplete: () => {
+            // Reset camera rotation
+            camera.lookAt(0, 0, 0);
+        }
+    }, 0);
+
+    // Then: Move the model forward past the camera
+    masterTimeline.to(model.position, {
+        duration: 2,
+        z: 10, // Move model forward past the camera
+        ease: "power2.in",
         onComplete: () => {
             isAnimating = false;
             modelContainer.style.display = 'none';
@@ -114,15 +147,7 @@ function startZoomAnimation() {
                 box.classList.remove('visible');
             });
         }
-    });
-
-    zoomTl.to([camera.position, camera], {
-        duration: 2,
-        ease: "power2.in",
-        z: 0.1,
-        fov: 20,
-        onUpdate: () => camera.updateProjectionMatrix()
-    });
+    }, ">=0");
 }
 
 function onWindowResize() {
