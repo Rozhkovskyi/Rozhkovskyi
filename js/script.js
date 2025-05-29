@@ -347,57 +347,38 @@ function handleDefaultSection(section) {
 
 // Handle footer item behavior
 const footerItems = document.querySelectorAll(".footer-item");
-const mainContent = document.querySelector(".main-content");
-const contentBoxes = document.querySelectorAll(".about-box, .services-box, .text-box, .image-box");
+const contactButtons = document.querySelector(".contact-buttons");
+const contactButton = document.getElementById('footer-item-contact');
 
-footerItems.forEach((item) => {
-  item.addEventListener("click", (event) => {
-    event.stopPropagation();
-    const isActive = item.classList.contains("active");
-
-    // Reset all footer items
-    footerItems.forEach((footer) => {
-      footer.classList.remove("active");
-      if (footer.id === "footer-item-contact") {
-        footer.textContent = "Contact";
-      }
+contactButton.addEventListener('click', function(event) {
+  event.stopPropagation();
+  const isActive = this.classList.contains('active');
+  
+  if (!isActive) {
+    // Show contact buttons
+    this.classList.add('active');
+    contactButtons.style.display = 'flex';
+    requestAnimationFrame(() => {
+      contactButtons.classList.add('visible');
     });
-
-    // Reset content box heights
-    mainContent.classList.remove("footer-expanded");
-    contentBoxes.forEach(box => box.classList.remove("footer-expanded"));
-
-    if (!isActive && item.id === "footer-item-contact") {
-      // Expand contact box
-      item.classList.add("active");
-      item.innerHTML = `Nick Rozhkovskyi
-+420722059544
-myk.rozhkvsk@gmail.com`;
-
-      // Adjust content boxes height
-      mainContent.classList.add("footer-expanded");
-      contentBoxes.forEach(box => {
-        if (box.classList.contains("visible")) {
-          box.classList.add("footer-expanded");
-        }
-      });
-    }
-  });
+  } else {
+    // Hide contact buttons
+    this.classList.remove('active');
+    contactButtons.classList.remove('visible');
+    setTimeout(() => {
+      contactButtons.style.display = 'none';
+    }, 300); // Match transition duration
+  }
 });
 
-// Close contact box when clicking outside
+// Close contact buttons when clicking outside
 document.addEventListener("click", (event) => {
   if (!event.target.closest('.footer')) {
-    footerItems.forEach((footer) => {
-      footer.classList.remove("active");
-      if (footer.id === "footer-item-contact") {
-        footer.textContent = "Contact";
-      }
-    });
-    
-    // Reset content box heights
-    mainContent.classList.remove("footer-expanded");
-    contentBoxes.forEach(box => box.classList.remove("footer-expanded"));
+    contactButton.classList.remove('active');
+    contactButtons.classList.remove('visible');
+    setTimeout(() => {
+      contactButtons.style.display = 'none';
+    }, 300);
   }
 });
 
